@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/token.js";
+import cloudinary from "../utils/cloudinary.js";
 
 const Signup = async (req, res) => {
   const { name, email, password } = req.body;
@@ -74,4 +75,27 @@ const Login = async (req, res) => {
   }
 };
 
-export { Signup, Logout, Login };
+const UpdateProfile = async (req, res) => {
+  try {
+    const { avatar } = req.body;
+    const userId = req.user._id;
+    if (!avatar) {
+      return res.status(400).json({ message: "Avatar is required" });
+    }
+    const uploadResponse = await cloudinary.uploader.upload(avatar);
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { avatar: uploadResponse.secure_url },
+      { new: true }
+    );
+  } catch (error) {}
+};
+const checkAuth = async (req, res) => {
+  try {
+    res.status(200).json(req.user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export { Signup, Logout, Login, UpdateProfile, checkAuth };
