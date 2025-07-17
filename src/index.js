@@ -1,8 +1,8 @@
 import connectDB from "./db/index.js";
-import app from "./app.js";
+import { app, server, io } from "./utils/socket.js";
 connectDB()
   .then(() => {
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
       console.log(`Server is running on port ${process.env.PORT}`);
     });
   })
