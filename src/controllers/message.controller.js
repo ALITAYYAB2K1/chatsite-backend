@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/token.js";
 import cloudinary from "../utils/cloudinary.js";
 import { Message } from "../models/message.model.js";
+import { getRecieverSocketId, io } from "../utils/socket.js";
 
 const getUsers = async (req, res) => {
   try {
@@ -69,6 +70,13 @@ const sendMessage = async (req, res) => {
       .populate("senderId", "-password -__v")
       .populate("recieverId", "-password -__v");
 
+    // Fixed: Use 'id' instead of 'recieverId' for socket emission
+    const receiverSocketId = getRecieverSocketId(id);
+    if (receiverSocketId) {
+      // Emit the new message to the receiver
+      io.to(receiverSocketId).emit("newMessage", populatedMessage);
+    }
+
     res.status(201).json({
       success: true,
       message: "Message sent successfully",
@@ -82,6 +90,7 @@ const sendMessage = async (req, res) => {
     });
   }
 };
+
 const deleteMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -136,4 +145,5 @@ const deleteMessage = async (req, res) => {
     });
   }
 };
+
 export { getUsers, getMessages, sendMessage, deleteMessage };

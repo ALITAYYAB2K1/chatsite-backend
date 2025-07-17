@@ -39,6 +39,10 @@ app.use("/api/v1/message", messageRoutes);
 
 const userSocketMap = {};
 
+export function getRecieverSocketId(userId) {
+  return userSocketMap[userId] || null;
+}
+
 // Socket.io connection handling
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
