@@ -82,5 +82,58 @@ const sendMessage = async (req, res) => {
     });
   }
 };
+const deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id;
 
-export { getUsers, getMessages, sendMessage };
+    // Find the message and check if user is authorized to delete it
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: "Message not found",
+      });
+    }
+
+    // Check if the user is the sender of the message
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own messages",
+      });
+    }
+
+    // If message has an image, delete it from Cloudinary
+    if (message.image && message.image.trim() !== "") {
+      try {
+        // Extract public_id from Cloudinary URL
+        const urlParts = message.image.split("/");
+        const publicIdWithExtension = urlParts[urlParts.length - 1];
+        const publicId = publicIdWithExtension.split(".")[0];
+
+        // Delete image from Cloudinary
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cloudinaryError) {
+        console.error("Error deleting image from Cloudinary:", cloudinaryError);
+        // Continue with message deletion even if Cloudinary deletion fails
+      }
+    }
+
+    // Delete the message from database
+    await Message.findByIdAndDelete(messageId);
+
+    res.status(200).json({
+      success: true,
+      message: "Message deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting message",
+      error: error.message,
+    });
+  }
+};
+export { getUsers, getMessages, sendMessage, deleteMessage };
