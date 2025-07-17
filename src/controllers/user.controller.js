@@ -77,18 +77,51 @@ const Login = async (req, res) => {
 
 const UpdateProfile = async (req, res) => {
   try {
-    const { avatar } = req.body;
     const userId = req.user._id;
-    if (!avatar) {
-      return res.status(400).json({ message: "Avatar is required" });
+
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: "Avatar file is required" });
     }
-    const uploadResponse = await cloudinary.uploader.upload(avatar);
-    const user = await User.findByIdAndUpdate(
+
+    // Convert buffer to base64 for Cloudinary upload
+    const base64String = `data:${
+      req.file.mimetype
+    };base64,${req.file.buffer.toString("base64")}`;
+
+    // Upload image to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload(base64String, {
+      folder: "chat_avatars", // Optional: organize uploads in folders
+      resource_type: "image",
+    });
+
+    // Update user with new avatar URL
+    const updatedUser = await User.findByIdAndUpdate(
       userId,
       { avatar: uploadResponse.secure_url },
       { new: true }
     );
-  } catch (error) {}
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar,
+      },
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({
+      message: "Failed to update profile",
+      error: error.message,
+    });
+  }
 };
 const checkAuth = async (req, res) => {
   try {
@@ -97,5 +130,31 @@ const checkAuth = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const GetProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
 
-export { Signup, Logout, Login, UpdateProfile, checkAuth };
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile fetched successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    res.status(500).json({
+      message: "Failed to fetch profile",
+      error: error.message,
+    });
+  }
+};
+
+export { Signup, Logout, Login, UpdateProfile, checkAuth, GetProfile };
