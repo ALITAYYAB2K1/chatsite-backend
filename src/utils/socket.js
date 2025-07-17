@@ -34,29 +34,26 @@ import userRoutes from "../routes/user.routes.js";
 import messageRoutes from "../routes/message.routes.js";
 
 // Use routes
-app.use("/api/v1/users", userRoutes);
-app.use("/api/v1/messages", messageRoutes);
+app.use("/api/v1", userRoutes);
+app.use("/api/v1/message", messageRoutes);
+
+const userSocketMap = {};
 
 // Socket.io connection handling
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
-
-  // Handle user joining
-  socket.on("join", (userId) => {
-    socket.join(userId);
-    console.log(`User ${userId} joined room ${userId}`);
-  });
-
-  // Handle sending messages
-  socket.on("sendMessage", (messageData) => {
-    const { receiverId } = messageData;
-    // Send message to the receiver
-    io.to(receiverId).emit("newMessage", messageData);
-  });
+  const userId = socket.handshake.query.userId;
+  if (userId) {
+    userSocketMap[userId] = socket.id;
+    console.log(`User ${userId} connected with socket ID ${socket.id}`);
+  }
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // Handle disconnect
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
+    delete userSocketMap[userId];
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });
 
