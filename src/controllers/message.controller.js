@@ -132,7 +132,18 @@ const deleteMessage = async (req, res) => {
 
     // Delete the message from database
     await Message.findByIdAndDelete(messageId);
+    const senderSocketId = getRecieverSocketId(userId.toString());
+    const receiverSocketId = getRecieverSocketId(message.recieverId.toString());
 
+    // Emit to sender
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageDeleted", messageId);
+    }
+
+    // Emit to receiver
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageDeleted", messageId);
+    }
     res.status(200).json({
       success: true,
       message: "Message deleted successfully",
