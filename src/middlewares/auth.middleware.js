@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 
 export const verifyJWT = async (req, res, next) => {
-  // Check for token in cookies first, then Authorization header
+  // Check multiple sources for the token
   let token = req.cookies.token;
 
   if (!token) {
@@ -12,6 +12,23 @@ export const verifyJWT = async (req, res, next) => {
       token = authHeader.substring(7); // Remove "Bearer " prefix
     }
   }
+
+  if (!token) {
+    // Check custom x-token header
+    token = req.headers["x-token"];
+  }
+
+  console.log("Token sources checked:");
+  console.log("- Cookie token:", req.cookies.token ? "Found" : "Not found");
+  console.log(
+    "- Authorization header:",
+    req.headers["authorization"] ? "Found" : "Not found"
+  );
+  console.log(
+    "- x-token header:",
+    req.headers["x-token"] ? "Found" : "Not found"
+  );
+  console.log("- Final token:", token ? "Found" : "Not found");
 
   if (!token) {
     return res
@@ -24,6 +41,7 @@ export const verifyJWT = async (req, res, next) => {
     req.user = await User.findById(decoded.id).select("-password");
     next();
   } catch (error) {
+    console.log("Token verification failed:", error.message);
     res.status(400).json({ message: "Invalid token" });
   }
 };
